@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail BI Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+</head>
+<body class="bg-white text-gray-900 font-sans h-screen overflow-hidden">
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: THE INGESTION GATE (Upload Screen)-->
+    <!-- ========================================== -->
+    <div id="upload-view" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gray-50/40 backdrop-blur-xl transition-opacity duration-300 px-4">
+        
+        <!-- Centered onboarding card -->
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-3xl shadow-[0_8px_24px_-6px_rgba(37,99,235,0.25)] mb-4">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <h1 class="text-5xl font-bold text-gray-900 tracking-tight">Retail Intelligence Hub</h1>
+            <p class="text-lg text-gray-500 mt-3 max-w-xl mx-auto leading-relaxed">Upload your historical transaction data to generate AI-driven forecasts and strategic business insights.</p>
+        </div>
+
+        <!-- Main upload card with optimized layout -->
+        <div class="bg-white rounded-3xl shadow-[0_20px_40px_-8px_rgba(0,0,0,0.08)] overflow-hidden max-w-4xl w-full flex flex-col md:flex-row border border-black-40">
+            
+            <!-- Left side: Dropzone -->
+            <div class="p-12 md:w-1/2 flex flex-col justify-center bg-gradient-to-br from-gray-50 to-gray-25 border-b md:border-b-0 md:border-r border-black-40">
+                <div id="dropzone" class="w-full h-72 bg-white border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 shadow-sm group">
+                    <svg class="w-14 h-14 text-gray-300 group-hover:text-blue-500 transition-colors mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <p class="text-lg font-semibold text-gray-800">Drag & Drop Dataset</p>
+                    <p class="text-sm text-gray-500 mt-1">or click to browse files</p>
+                    <input type="file" id="fileInput" class="hidden" accept=".csv" />
+                </div>
+
+                <div id="upload-loading" class="hidden h-72 flex flex-col items-center justify-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-2 border-gray-200 border-t-blue-600 mb-4"></div>
+                    <p class="text-gray-800 font-semibold text-lg">Processing Pipeline...</p>
+                    <p class="text-gray-500 text-sm mt-2 animate-pulse">Running Autoregressive Forecast</p>
+                </div>
+            </div>
+
+            <!-- Right side: Format requirements -->
+            <div class="p-12 md:w-1/2 bg-white flex flex-col justify-center">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-6">Required Data Format</h3>
+                
+                <div class="space-y-5">
+                    <!-- Format requirement 1 -->
+                    <div class="flex items-start gap-4">
+                        <div class="mt-0.5 flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">1</div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">Order_Date</p>
+                            <p class="text-xs text-gray-500 mt-1">Must be a valid date string (e.g., YYYY-MM-DD).</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Format requirement 2 -->
+                    <div class="flex items-start gap-4">
+                        <div class="mt-0.5 flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">2</div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">Category</p>
+                            <p class="text-xs text-gray-500 mt-1">Text field identifying the product group.</p>
+                        </div>
+                    </div>
+
+                    <!-- Format requirement 3 -->
+                    <div class="flex items-start gap-4">
+                        <div class="mt-0.5 flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">3</div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">Revenue</p>
+                            <p class="text-xs text-gray-500 mt-1">Numeric value representing total sales.</p>
+                        </div>
+                    </div>
+
+                    <!-- Format requirement 4 -->
+                    <div class="flex items-start gap-4">
+                        <div class="mt-0.5 flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">4</div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">Profit</p>
+                            <p class="text-xs text-gray-500 mt-1">Numeric value representing net profit.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info box with subtle styling -->
+                <div class="mt-8 pt-6 border-t border-black-40">
+                    <div class="flex items-center gap-3 text-xs text-gray-600">
+                        <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Only standard <strong class="font-semibold">CSV</strong> files are supported. Max size: 50MB.</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: THE DASHBOARD                     -->
+    <!-- ========================================== -->
+    <div id="dashboard-view" class="hidden flex flex-col h-full w-full bg-white">
+        
+        <!-- Premium header with subtle styling -->
+        <header class="h-16 bg-white border-b border-black-40 flex items-center justify-between px-8 shrink-0 z-10 backdrop-blur-lg bg-white/80">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-[0_4px_12px_-4px_rgba(37,99,235,0.3)]">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                </div>
+                <h1 class="text-lg font-semibold text-gray-900 tracking-tight">Retail Intelligence Hub</h1>
+            </div>
+            
+            <!-- Call-to-action button with premium styling -->
+            <button onclick="toggleCopilot()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-[0_4px_12px_-4px_rgba(37,99,235,0.3)] text-sm font-medium">
+                ✨ Ask AI Copilot
+            </button>
+        </header>
+
+        <div class="flex flex-1 overflow-hidden">
+            
+            <!-- Sidebar: Filters panel with refined styling -->
+            <aside class="w-72 bg-white border-r border-black-40 p-8 flex flex-col gap-8 overflow-y-auto">
+                <div>
+                    <h2 class="font-semibold text-gray-900 uppercase text-xs tracking-widest mb-6">Data Filters</h2>
+                
+                    <!-- Category filter -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Product Category</label>
+                        <select id="categoryFilter" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm bg-gray-50/50 hover:border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:bg-white transition-colors">
+                            <option value="All">All Categories</option>
+                        </select>
+                    </div>
+
+                    <!-- Day of week filter -->
+                    <div class="mt-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Day of the Week</label>
+                        <div class="space-y-2.5" id="day-checkboxes">
+                            <div class="flex items-center gap-3 pb-3 mb-3 border-b border-black-40">
+                                <input type="checkbox" id="selectAllDays" checked class="w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer focus:ring-blue-500">
+                                <label for="selectAllDays" class="text-sm font-bold text-gray-800 cursor-pointer">Select All</label>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" value="Monday" checked id="day-monday" class="day-filter w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer">
+                                <label for="day-monday" class="text-sm text-gray-600 cursor-pointer">Monday</label>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" value="Tuesday" checked id="day-tuesday" class="day-filter w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer">
+                                <label for="day-tuesday" class="text-sm text-gray-600 cursor-pointer">Tuesday</label>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" value="Wednesday" checked id="day-wednesday" class="day-filter w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer">
+                                <label for="day-wednesday" class="text-sm text-gray-600 cursor-pointer">Wednesday</label>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" value="Thursday" checked id="day-thursday" class="day-filter w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer">
+                                <label for="day-thursday" class="text-sm text-gray-600 cursor-pointer">Thursday</label>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" value="Friday" checked id="day-friday" class="day-filter w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer">
+                                <label for="day-friday" class="text-sm text-gray-600 cursor-pointer">Friday</label>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" value="Saturday" checked id="day-saturday" class="day-filter w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer">
+                                <label for="day-saturday" class="text-sm text-gray-600 cursor-pointer">Saturday</label>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" value="Sunday" checked id="day-sunday" class="day-filter w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer">
+                                <label for="day-sunday" class="text-sm text-gray-600 cursor-pointer">Sunday</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Region filter -->
+                    <div class="mt-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Region</label>
+                        <select id="regionFilter" class="w-full border border-gray-200 rounded-xl p-2.5 text-sm bg-gray-50/50 hover:border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:bg-white transition-colors">
+                            <option value="All">All Regions</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mt-6 pt-6 border-t border-black-40">
+                        <div class="flex justify-between items-center mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Timeline Range</label>
+                            <span id="monthRangeLabel" class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">All</span>
+                        </div>
+                        
+                        <div class="space-y-5">
+                            <div>
+                                <div class="flex justify-between text-xs text-gray-500 mb-2">
+                                    <span class="font-medium">Start</span>
+                                    <span id="startLabel" class="font-semibold text-gray-700">...</span>
+                                </div>
+                                <input type="range" id="monthSliderStart" min="0" value="0" class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                            </div>
+                            
+                            <div>
+                                <div class="flex justify-between text-xs text-gray-500 mb-2">
+                                    <span class="font-medium">End</span>
+                                    <span id="endLabel" class="font-semibold text-gray-700">...</span>
+                                </div>
+                                <input type="range" id="monthSliderEnd" min="0" value="0" class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-2 pt-6 border-t border-black-40">
+                        <button id="btn-replace-data" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm font-medium text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Replace Dataset
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main content area -->
+            <main class="flex-1 overflow-y-auto bg-gradient-to-b from-white to-gray-50/30">
+                
+                <!-- KPI cards section with premium styling -->
+                <div class="px-8 pt-8 pb-6 grid grid-cols-4 gap-6">
+                    <div class="bg-white rounded-2xl p-6 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Total Revenue</p>
+                        <p class="text-3xl font-bold text-gray-900" id="kpi-rev">$0</p>
+                        <p class="text-xs text-gray-500 mt-2">Historical + Forecast</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Avg Daily Revenue</p>
+                        <p class="text-3xl font-bold text-blue-600" id="kpi-avg">$0</p>
+                        <p class="text-xs text-gray-500 mt-2">Rolling average</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Total Profit</p>
+                        <p class="text-3xl font-bold text-green-600" id="kpi-prof">$0</p>
+                        <p class="text-xs text-gray-500 mt-2">Operational earnings</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Profit Margin</p>
+                        <p class="text-3xl font-bold text-purple-600" id="kpi-marg">0%</p>
+                        <p class="text-xs text-gray-500 mt-2">Net margin percentage</p>
+                    </div>
+                </div>
+
+                <!-- Main chart: Revenue trend & Forecast -->
+                <div class="px-8 py-6">
+                    <div class="bg-white rounded-2xl p-8 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col md:flex-row gap-8">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-gray-900 mb-4">Revenue Trend & 90-Day Forecast</h3>
+                            <div id="mainChart" class="w-full h-96"></div>
+                            <div class="mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100 flex gap-3 items-start">
+                                <span class="text-blue-600 mt-0.5">✨</span>
+                                <p id="ai-forecast-summary" class="text-sm text-gray-700 leading-relaxed font-medium">Waiting for data to generate strategic insight...</p>
+                            </div>
+                        </div>
+
+                        <div class="w-full md:w-80 flex flex-col border-t md:border-t-0 md:border-l border-black-40 pt-6 md:pt-0 md:pl-8">
+                            <div>
+                                <h3 class="font-semibold text-gray-900 flex items-center gap-2 mb-1">
+                                    <svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zM9 9V5h2v4h4v2h-4v4H9v-4H5V9h4z"/></svg>
+                                    Forecast Drivers (XAI)
+                                </h3>
+                                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">SHAP Feature Importance</p>
+                            </div>
+                            
+                            <div id="xai-container" class="flex-1 mt-6 flex flex-col gap-5">
+                                <div class="flex items-center justify-center h-full text-xs text-gray-400">Waiting for inference...</div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+
+                <!-- Secondary charts grid: 2x3 layout with consistent spacing -->
+                <div class="px-8 py-6 grid grid-cols-2 gap-6 pb-12">
+                    <!-- Pie chart: Revenue by Category -->
+                    <div class="bg-white rounded-2xl p-8 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <h3 class="font-semibold text-gray-900 mb-4">Revenue by Category</h3>
+                        <div id="pieChart" class="w-full h-64"></div>
+                    </div>
+
+                    <!-- Bar chart: Profit vs Revenue -->
+                    <div class="bg-white rounded-2xl p-8 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <h3 class="font-semibold text-gray-900 mb-4">Profit vs Revenue</h3>
+                        <div id="barChart" class="w-full h-64"></div>
+                    </div>
+
+                    <!-- Day chart: Average Revenue by Day -->
+                    <div class="bg-white rounded-2xl p-8 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <h3 class="font-semibold text-gray-900 mb-4">Average Revenue by Day</h3>
+                        <div id="dayChart" class="w-full h-64"></div>
+                    </div>
+
+                    <!-- Box chart: Revenue Volatility -->
+                    <div class="bg-white rounded-2xl p-8 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <h3 class="font-semibold text-gray-900 mb-4">Revenue Volatility</h3>
+                        <div id="boxChart" class="w-full h-64"></div>
+                    </div>
+
+                    <!-- Product chart: Top 10 Products -->
+                    <div class="bg-white rounded-2xl p-8 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <h3 class="font-semibold text-gray-900 mb-4">Top 10 Products by Revenue</h3>
+                        <div id="productChart" class="w-full h-64"></div>
+                    </div>
+
+                    <!-- Region chart: Revenue by Region -->
+                    <div class="bg-white rounded-2xl p-8 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <h3 class="font-semibold text-gray-900 mb-4">Revenue by Region</h3>
+                        <div id="regionChart" class="w-full h-64"></div>
+                    </div>
+                </div>
+
+                <!-- Geospatial map section with premium styling -->
+                <div class="px-8 py-6">
+                    <div class="bg-white rounded-2xl p-8 border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+                        <div>
+                            <h3 class="font-semibold text-gray-900">Geospatial Revenue Distribution</h3>
+                            <p class="text-xs text-gray-500 mt-1">Visualizing market penetration and gross sales by country origin.</p>
+                        </div>
+                        <div id="mapChart" class="w-full h-96 bg-gray-50 rounded-xl overflow-hidden mt-6 relative"></div>
+                        <div class="mt-4 p-4 bg-purple-50/50 rounded-xl border border-purple-100 flex gap-3 items-start">
+                            <span class="text-purple-600 mt-0.5">✨</span>
+                            <p id="ai-map-summary" class="text-sm text-gray-700 leading-relaxed font-medium">Waiting for geospatial data to generate insight...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data table section with refined styling -->
+                <div class="px-8 py-6 pb-12">
+                    <div class="bg-white rounded-2xl border border-black-40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] overflow-hidden">
+                        <!-- Table header -->
+                        <div class="p-8 border-b border-black-40 flex justify-between items-center">
+                            <h3 class="font-semibold text-gray-900">Raw Data Explorer</h3>
+                            <div class="text-sm text-gray-500">
+                                Showing <span id="table-start" class="font-semibold text-gray-900">0</span> - <span id="table-end" class="font-semibold text-gray-900">0</span> of <span id="table-total" class="font-semibold text-gray-900">0</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Table content -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-gray-600">
+                                <thead class="bg-gray-50/80 text-gray-700 uppercase text-xs font-semibold border-b border-black-40">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left">Date</th>
+                                        <th class="px-6 py-3 text-left">Region</th> 
+                                        <th class="px-6 py-3 text-left">Category</th>
+                                        <th class="px-6 py-3 text-left">Product Name</th> 
+                                        <th class="px-6 py-3 text-right">Revenue</th>
+                                        <th class="px-6 py-3 text-right">Profit</th>
+                                        <th class="px-6 py-3 text-right">Margin</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dataTableBody" class="divide-y divide-gray-100"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination controls -->
+                        <div class="px-8 py-4 border-t border-black-40 flex items-center justify-end gap-4 bg-gray-50/30">
+                            <button id="btn-prev-page" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-white transition-colors">Previous</button>
+                            
+                            <div class="flex items-center gap-2 text-sm text-gray-600">
+                                <span>Page</span>
+                                <input type="number" id="page-jump-input" min="1" class="w-12 text-center border border-gray-200 rounded-lg p-1 text-sm font-semibold text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" value="1">
+                                <span id="page-indicator">of 1</span>
+                            </div>
+
+                            <button id="btn-next-page" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-white transition-colors">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- AI Copilot sidebar with glassmorphism effect -->
+            <aside id="aiCopilot" class="w-96 bg-white/95 border-l border-black-40 flex flex-col hidden shadow-[0_20px_40px_-8px_rgba(0,0,0,0.1)] transition-all duration-300 backdrop-blur-xl">
+                
+                <!-- Copilot header -->
+                <div class="p-6 border-b border-black-40 bg-gradient-to-r from-blue-50/50 to-blue-50/30">
+                    <h2 class="font-semibold text-gray-900 flex items-center gap-2">
+                        <span>✨</span> Retail AI Copilot
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-1">Powered by Local LLM</p>
+                </div>
+                
+                <!-- Chat history area -->
+                <div class="flex-1 p-6 overflow-y-auto flex flex-col gap-4 text-sm" id="chatHistory">
+                    <div class="bg-gray-100 p-3 rounded-2xl rounded-tl-none self-start max-w-[85%] text-gray-800 text-sm">
+                        How can I help you analyze the forecast data today?
+                    </div>
+                </div>
+
+                <!-- Input area -->
+                <div class="p-6 border-t border-black-40 bg-gray-50/50">
+                    <input type="text" placeholder="Ask a question..." class="w-full border border-gray-200 rounded-full px-4 py-2.5 text-sm bg-white hover:border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-colors">
+                </div>
+            </aside>
+
+        </div>
+    </div>
+
+    <script>
+        // Toggle copilot panel visibility
+        function toggleCopilot() {
+            const copilot = document.getElementById('aiCopilot');
+            copilot.classList.toggle('hidden');
+        }
+    </script>
+    
+    <!-- Chart rendering scripts (IDs must remain unchanged) -->
+    <script src="/static/forecast_chart.js"></script>
+    <script src="/static/pie_chart.js"></script>
+    <script src="/static/bar_chart.js"></script>
+    <script src="/static/day_chart.js"></script> 
+    <script src="/static/box_chart.js"></script>
+    <script src="/static/data_table.js"></script>
+    <script src="/static/product_chart.js"></script>
+    <script src="/static/region_chart.js"></script>
+    <script src="/static/map_chart.js"></script>
+    
+    <!-- Main dashboard controller -->
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>
